@@ -3,6 +3,8 @@ import json
 import os
 import time
 
+from src.callbacks import AudioProcessingCallbacks
+
 from .buffering_strategy_interface import BufferingStrategyInterface
 
 
@@ -49,15 +51,9 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
             self.chunk_offset_seconds = kwargs.get("chunk_offset_seconds")
         self.chunk_offset_seconds = float(self.chunk_offset_seconds)
 
-        self.error_if_not_realtime = os.environ.get("ERROR_IF_NOT_REALTIME")
-        if not self.error_if_not_realtime:
-            self.error_if_not_realtime = kwargs.get(
-                "error_if_not_realtime", False
-            )
-
         self.processing_flag = False
 
-    def process_audio(self, websocket, vad_pipeline, asr_pipeline):
+    def process_audio(self, callbacks: AudioProcessingCallbacks, vad_pipeline, asr_pipeline):
         """
         Process audio chunks by checking their length and scheduling
         asynchronous processing.
@@ -66,7 +62,7 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
         length and, if so, it schedules asynchronous processing of the audio.
 
         Args:
-            websocket: The WebSocket connection for sending transcriptions.
+            callbacks: Callbacks for audio processing events.
             vad_pipeline: The voice activity detection pipeline.
             asr_pipeline: The automatic speech recognition pipeline.
         """
@@ -77,35 +73,31 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
         )
         if len(self.client.buffer) > chunk_length_in_bytes:
             if self.processing_flag:
-                exit(
-                    "Error in realtime processing: tried processing a new "
-                    "chunk while the previous one was still being processed"
-                )
+                self.processing_flag.cancel()
 
             self.client.scratch_buffer += self.client.buffer
             self.client.buffer.clear()
-            self.processing_flag = True
             # Schedule the processing in a separate task
-            asyncio.create_task(
-                self.process_audio_async(websocket, vad_pipeline, asr_pipeline)
+            self.processing_flag = asyncio.create_task(
+                self.process_audio_async(callbacks, vad_pipeline, asr_pipeline)
             )
 
-    async def process_audio_async(self, websocket, vad_pipeline, asr_pipeline):
+    async def process_audio_async(self, callbacks: AudioProcessingCallbacks, vad_pipeline, asr_pipeline):
         """
         Asynchronously process audio for activity detection and transcription.
 
         This method performs heavy processing, including voice activity
-        detection and transcription of the audio data. It sends the
-        transcription results through the WebSocket connection.
+        detection and transcription of the audio data. If conditions are met, 
+        triggers transcribes the audio, and triggers 
+        processing and transcription callbacks
 
         Args:
-            websocket (Websocket): The WebSocket connection for sending
-                                   transcriptions.
+            callbacks: Callbacks for audio processing events.
             vad_pipeline: The voice activity detection pipeline.
             asr_pipeline: The automatic speech recognition pipeline.
         """
         start = time.time()
-        vad_results = await vad_pipeline.detect_activity(self.client)
+        vad_results = await vad_pipeline.detect_activity(self.client.scratch_buffer)
 
         if len(vad_results) == 0:
             self.client.scratch_buffer.clear()
@@ -123,7 +115,7 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
                 end = time.time()
                 transcription["processing_time"] = end - start
                 json_transcription = json.dumps(transcription)
-                await websocket.send(json_transcription)
+                await callbacks.trigger_transcription_complete(json_transcription)
             self.client.scratch_buffer.clear()
             self.client.increment_file_counter()
 

@@ -1,11 +1,12 @@
 import json
-import logging
 import ssl
 import uuid
 
 import websockets
 
 from src.client import Client
+from src.utils.base_logger import logger
+from .callbacks import AudioProcessingCallbacks
 
 
 class Server:
@@ -49,6 +50,20 @@ class Server:
         self.connected_clients = {}
 
     async def handle_audio(self, client, websocket):
+        
+        async def on_transcription_complete(message):
+            # Process the transcribed message
+            try:
+                await websocket.send_text(message)
+            except Exception as e:
+                logger.error(f"Error processing message: {e}")
+                # This could be enhanced with proper error handling
+                
+        # Initialize callbacks
+        callbacks = AudioProcessingCallbacks(
+            on_transcription_complete=on_transcription_complete,
+        )
+        
         while True:
             message = await websocket.recv()
 
@@ -58,14 +73,14 @@ class Server:
                 config = json.loads(message)
                 if config.get("type") == "config":
                     client.update_config(config["data"])
-                    logging.debug(f"Updated config: {client.config}")
+                    logger.debug(f"Updated config: {client.config}")
                     continue
             else:
-                print(f"Unexpected message type from {client.client_id}")
+                logger.error(f"Unexpected message type from {client.client_id}")
 
             # this is synchronous, any async operation is in BufferingStrategy
             client.process_audio(
-                websocket, self.vad_pipeline, self.asr_pipeline
+                callbacks, self.vad_pipeline, self.asr_pipeline
             )
 
     async def handle_websocket(self, websocket):
@@ -73,12 +88,12 @@ class Server:
         client = Client(client_id, self.sampling_rate, self.samples_width)
         self.connected_clients[client_id] = client
 
-        print(f"Client {client_id} connected")
+        logger.info(f"Client {client_id} connected")
 
         try:
             await self.handle_audio(client, websocket)
         except websockets.ConnectionClosed as e:
-            print(f"Connection with {client_id} closed: {e}")
+            logger.error(f"Connection with {client_id} closed: {e}")
         finally:
             del self.connected_clients[client_id]
 
@@ -94,7 +109,7 @@ class Server:
                 certfile=self.certfile, keyfile=self.keyfile
             )
 
-            print(
+            logger.info(
                 f"WebSocket server ready to accept secure connections on "
                 f"{self.host}:{self.port}"
             )
@@ -106,7 +121,7 @@ class Server:
                 self.handle_websocket, self.host, self.port, ssl=ssl_context
             )
         else:
-            print(
+            logger.error(
                 f"WebSocket server ready to accept secure connections on "
                 f"{self.host}:{self.port}"
             )

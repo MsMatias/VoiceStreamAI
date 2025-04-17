@@ -3,6 +3,7 @@
 from src.buffering_strategy.buffering_strategy_factory import (
     BufferingStrategyFactory,
 )
+from src.callbacks import AudioProcessingCallbacks
 
 
 class Client:
@@ -33,7 +34,7 @@ class Client:
             "language": None,
             "processing_strategy": "silence_at_end_of_chunk",
             "processing_args": {
-                "chunk_length_seconds": 5,
+                "chunk_length_seconds": 3,
                 "chunk_offset_seconds": 0.1,
             },
         }
@@ -72,7 +73,7 @@ class Client:
     def get_file_name(self):
         return f"{self.client_id}_{self.file_counter}.wav"
 
-    def process_audio(self, websocket, vad_pipeline, asr_pipeline):
+    def process_audio(self, callbacks: AudioProcessingCallbacks, vad_pipeline, asr_pipeline):
         self.buffering_strategy.process_audio(
-            websocket, vad_pipeline, asr_pipeline
+            callbacks, vad_pipeline, asr_pipeline
         )

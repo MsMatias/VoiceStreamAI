@@ -1,7 +1,7 @@
 import argparse
 import asyncio
 import json
-import logging
+from src.utils.base_logger import logger, setLogger
 
 from src.asr.asr_factory import ASRFactory
 from src.vad.vad_factory import VADFactory
@@ -17,8 +17,8 @@ def parse_args():
     parser.add_argument(
         "--vad-type",
         type=str,
-        default="pyannote",
-        help="Type of VAD pipeline to use (e.g., 'pyannote')",
+        default="silero",
+        help="Type of VAD pipeline to use (e.g., 'silero')",
     )
     parser.add_argument(
         "--vad-args",
@@ -73,14 +73,13 @@ def parse_args():
 def main():
     args = parse_args()
 
-    logging.basicConfig()
-    logging.getLogger().setLevel(args.log_level.upper())
+    setLogger("debug")
 
     try:
         vad_args = json.loads(args.vad_args)
         asr_args = json.loads(args.asr_args)
     except json.JSONDecodeError as e:
-        print(f"Error parsing JSON arguments: {e}")
+        logger.error(f"Error parsing JSON arguments: {e}")
         return
 
     vad_pipeline = VADFactory.create_vad_pipeline(args.vad_type, **vad_args)
