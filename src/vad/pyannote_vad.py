@@ -1,10 +1,10 @@
 import os
-from os import remove
-
+import io
+import soundfile as sf
 from pyannote.audio import Model
 from pyannote.audio.pipelines import VoiceActivityDetection
 
-from src.audio_utils import save_audio_to_file
+from src.utils.audio_utils import convert_audio_bytes_to_numpy
 
 from .vad_interface import VADInterface
 
@@ -51,11 +51,19 @@ class PyannoteVAD(VADInterface):
         self.vad_pipeline.instantiate(pyannote_args)
 
     async def detect_activity(self, client):
-        audio_file_path = await save_audio_to_file(
-            client.scratch_buffer, client.get_file_name()
-        )
-        vad_results = self.vad_pipeline(audio_file_path)
-        remove(audio_file_path)
+        audio_np = convert_audio_bytes_to_numpy(client.scratch_buffer)
+        
+        # Create an in-memory audio file
+        audio_buffer = io.BytesIO()
+        # Save as WAV at 16kHz sample rate
+        sf.write(audio_buffer, audio_np, 16000, format='WAV')
+        
+        # Reset buffer position for reading
+        audio_buffer.seek(0)
+        
+        # Process with Pyannote directly from the in-memory buffer
+        vad_results = self.vad_pipeline(audio_buffer)
+
         vad_segments = []
         if len(vad_results) > 0:
             vad_segments = [
