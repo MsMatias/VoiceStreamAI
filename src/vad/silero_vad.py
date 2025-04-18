@@ -1,6 +1,9 @@
+from math import floor
+
 from silero_vad import load_silero_vad, get_speech_timestamps
 
 from src.utils.audio_utils import convert_audio_bytes_to_numpy
+from src.utils.base_logger import logger
 
 from .vad_interface import VADInterface
 
@@ -23,7 +26,7 @@ class SileroVAD(VADInterface):
         
         # It returns ms
         new_timestamps = [
-            {'starts': timestamp['starts'] / 10000, 'ends': timestamp['ends'] / 10000}
+            {'start': floor(timestamp['start'] / 10000), 'end': floor(timestamp['end'] / 10000)}
             for timestamp in speech_timestamps
         ]
         
