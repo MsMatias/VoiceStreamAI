@@ -41,7 +41,7 @@ class TestPyannoteVAD(unittest.TestCase):
                 self.client.scratch_buffer = bytearray(audio_segment.raw_data)
 
                 vad_results = asyncio.run(
-                    self.vad.detect_activity(self.client)
+                    self.vad.detect_activity(self.client.scratch_buffer)
                 )
 
                 # Adjust VAD-detected times by adding the start time of the
