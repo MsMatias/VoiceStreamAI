@@ -23,7 +23,7 @@ def parse_args():
     parser.add_argument(
         "--vad-args",
         type=str,
-        default='{"auth_token": "huggingface_token"}',
+        default=None,
         help="JSON string of additional arguments for VAD pipeline",
     )
     parser.add_argument(
@@ -35,7 +35,7 @@ def parse_args():
     parser.add_argument(
         "--asr-args",
         type=str,
-        default='{"model_size": "large-v3"}',
+        default='{"model_size": "tiny"}',
         help="JSON string of additional arguments for ASR pipeline",
     )
     parser.add_argument(
