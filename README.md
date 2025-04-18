@@ -4,7 +4,7 @@
 
 VoiceStreamAI is a Python 3 -based server and JavaScript client solution that
 enables near-realtime audio streaming and transcription using WebSocket. The
-system employs Huggingface's Voice Activity Detection (VAD) and OpenAI's Whisper
+system employs Silero Voice Activity Detection (VAD) and OpenAI's Whisper
 model ([faster-whisper](https://github.com/SYSTRAN/faster-whisper) being the
 default) for accurate speech recognition and processing.
 
@@ -78,6 +78,8 @@ following packages:
 5. `asyncio`
 6. `sentence-transformers`
 7. `faster-whisper`
+8. `silero-vad`
+9. `soundfile`
 
 Install these packages using pip:
 
@@ -96,7 +98,7 @@ allowing you to specify components, host, and port settings according to your
 needs.
 
 - `--vad-type`: Specifies the type of Voice Activity Detection (VAD) pipeline to
-  use (default: `pyannote`) .
+  use (default: `silero`). The default Silero VAD doesn't require an authentication token.
 - `--vad-args`: A JSON string containing additional arguments for the VAD
   pipeline. (required for `pyannote`: `'{"auth_token": "VAD_AUTH_HERE"}'`)
 - `--asr-type`: Specifies the type of Automatic Speech Recognition (ASR)
@@ -113,12 +115,19 @@ needs.
 
 For running the server with the standard configuration:
 
+```bash
+python3 -m src.main --help
+```
+
+Since the default VAD is Silero, which doesn't require an authentication token, 
+the above command is sufficient. If you want to use pyannote VAD:
+
 1. Obtain the key to the Voice-Activity-Detection model
    at [https://huggingface.co/pyannote/segmentation](https://huggingface.co/pyannote/segmentation)
 2. Run the server using Python 3.x, please add the VAD key in the command line:
 
 ```bash
-python3 -m src.main --vad-args '{"auth_token": "vad token here"}'
+python3 -m src.main  --vad-type 'pyannote' --vad-args '{"auth_token": "vad token here"}'
 ```
 
 You can see all the command line options with the command:
