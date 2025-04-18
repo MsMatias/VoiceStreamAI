@@ -54,7 +54,7 @@ class Server:
         async def on_transcription_complete(message):
             # Process the transcribed message
             try:
-                await websocket.send_text(message)
+                await websocket.send(message)
             except Exception as e:
                 logger.error(f"Error processing message: {e}")
                 # This could be enhanced with proper error handling
