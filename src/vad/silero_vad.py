@@ -18,15 +18,15 @@ class SileroVAD(VADInterface):
         """
         self.model = load_silero_vad()
 
-    async def detect_activity(self, buffer):
+    async def detect_activity(self, client):
         # Convert bytearray to numpy array
-        audio_np = convert_audio_bytes_to_numpy(buffer)
+        audio_np = convert_audio_bytes_to_numpy(client.scratch_buffer)
         
         speech_timestamps = get_speech_timestamps(audio_np, self.model)
         
         # It returns ms
         new_timestamps = [
-            {'start': floor(timestamp['start'] / 10000), 'end': floor(timestamp['end'] / 10000)}
+            {'start': floor(timestamp['start'] / client.sampling_rate), 'end': floor(timestamp['end'] / client.sampling_rate)}
             for timestamp in speech_timestamps
         ]
         

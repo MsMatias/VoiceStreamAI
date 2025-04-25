@@ -97,7 +97,7 @@ class SilenceAtEndOfChunk(BufferingStrategyInterface):
             asr_pipeline: The automatic speech recognition pipeline.
         """
         start = time.time()
-        vad_results = await vad_pipeline.detect_activity(self.client.scratch_buffer)
+        vad_results = await vad_pipeline.detect_activity(self.client)
 
         if len(vad_results) == 0:
             self.client.scratch_buffer.clear()
